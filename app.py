@@ -1,5 +1,9 @@
-from unicodedata import name
 from flask import Flask, render_template, request, redirect
+from PIL import Image
+import pickle
+import numpy as np
+import uuid
+import joblib
 import os
 
 # Flask는 Flask 객체를 먼저 생성한다
@@ -52,10 +56,33 @@ def upload():
     else:
         # request.files에 업로드한 파일이 넘어온다.
         f = request.files['file']
-        path = os.path.dirname(__file__)+'/upload/'+f.filename # __file__ → 현재 파일
+        path = os.path.dirname(__file__)+'/upload/'+ f.filename # __file__ → 현재 파일
         print(path) # 파일 업로드시 저장되는 경로 확인
         f.save(path) # 업로드 파일 저장
         return redirect('/')
+
+@app.route('/mnist', methods=['GET','POST'])
+
+def mnist():
+    if request.method=='GET':
+        return render_template('mnist_form.html')
+    else:
+        f = request.files['filename']
+        path = os.path.dirname(__file__) + '/static/upload/'+ str(uuid.uuid4()) +'.png'
+        #path = os.path.dirname(__file__) + '/static/upload/'+ f.filename
+        print(path)
+        f.save(path)
+        img = Image.open(path).convert('L')
+        img = np.resize(img, (1,784))
+        img = 255 - img
+        path = path[34:]
+        modelpath = 'model/mnist.ml'
+        f = open(modelpath,'rb')
+        model = joblib.load(f)
+        pred= model.predict(img)
+        print(pred)
+        return render_template('mnistresult.html', data=[pred[0], path])
+      
 
 
 # app을 run한다.
